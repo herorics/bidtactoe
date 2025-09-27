@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bid Tac Toe — Human vs Human</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#111827; --panel-2:#0f172a; --text:#e5e7eb; --muted:#9ca3af;
+      --accent:#22d3ee; --accent-2:#60a5fa; --danger:#f87171; --ok:#34d399; --warn:#fbbf24;
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial;
+      background: radial-gradient(1000px 600px at 20% -10%, #0c1320 0%, #0b0f14 60%) no-repeat;
+      color:var(--text);
+    }
+    .wrap{max-width:1100px; margin:28px auto; padding:0 18px}
+    h1{font-size:28px; margin:0 0 6px; letter-spacing:.4px}
+    .sub{color:var(--muted); font-size:14px; margin-bottom:16px}
+    .grid{
+      display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; width:min(420px, 90vw);
+      margin:12px 0; 
+    }
+    .cell{
+      aspect-ratio:1/1; background:linear-gradient(180deg, #101826, #0b1220);
+      border:1px solid #1f2937; border-radius:18px; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:44px; cursor:pointer; user-select:none; transition:transform .05s ease;
+      box-shadow:var(--shadow);
+    }
+    .cell:hover{transform:translateY(-1px)}
+    .cell.disabled{cursor:not-allowed; opacity:.55}
+    .panel{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid #1f2937; border-radius:18px; padding:16px; box-shadow:var(--shadow)}
+    .row{display:flex; gap:16px; flex-wrap:wrap}
+    .col{flex:1 1 340px}
+    .badge{display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; border:1px solid #1f2937; background:#0b1220}
+    .money{font-variant-numeric:tabular-nums}
+    .muted{color:var(--muted)}
+    .btn{background:linear-gradient(180deg, #0ea5e9, #0284c7); border:none; color:white; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer}
+    .btn.secondary{background:linear-gradient(180deg, #374151, #1f2937)}
+    .btn.warn{background:linear-gradient(180deg, #f59e0b, #d97706)}
+    .btn.danger{background:linear-gradient(180deg, #ef4444, #b91c1c)}
+    .btn.ghost{background:transparent; border:1px solid #334155; color:#e5e7eb}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .field{display:flex; gap:8px; align-items:center}
+    input[type="number"], input[type="text"], textarea{
+      background:#0b1220; color:#e5e7eb; border:1px solid #243043; border-radius:10px; padding:10px 12px; outline:none; width:100%;
+    }
+    input[type="password"]{letter-spacing:2px}
+    .stack{display:flex; flex-direction:column; gap:12px}
+    .hr{height:1px; background:#1f2937; margin:10px 0}
+    .log{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b1220; border:1px solid #1f2937; border-radius:12px; padding:10px; height:140px; overflow:auto}
+    .radio-row{display:flex; gap:12px; flex-wrap:wrap}
+    .chip{padding:6px 10px; border:1px solid #334155; border-radius:999px; cursor:pointer}
+    .chip input{display:none}
+    .chip.active{background:#0ea5e9; border-color:#0284c7; color:white}
+    .footer{margin-top:18px; font-size:12px}
+    details{background:#0b1220; border:1px solid #243043; border-radius:12px; padding:10px}
+    summary{cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Bid Tac Toe — Human vs Human</h1>
+    <div class="sub">Auction Tic‑Tac‑Toe. Each player starts with a budget (default $100). Each turn both secretly bid; higher bid places a mark anywhere; <span class="badge">both</span> pay their bid. Ties decide by coin toss.</div>
+
+    <div class="row">
+      <div class="col panel">
+        <div class="row" style="align-items:flex-start">
+          <div>
+            <div class="badge">Board</div>
+            <div id="board" class="grid" aria-label="Tic Tac Toe board"></div>
+            <div id="status" class="muted" style="margin-top:8px"></div>
+          </div>
+          <div class="col stack">
+            <div>
+              <div class="badge">Room</div>
+              <div class="stack">
+                <div class="radio-row">
+                  <label class="chip" id="modeHotseat"><input type="radio" name="mode" checked> Hotseat (same device)</label>
+                  <label class="chip" id="modeOnline"><input type="radio" name="mode"> Online (copy‑paste WebRTC)</label>
+                </div>
+                <div id="webrtcBox" style="display:none" class="stack">
+                  <div class="muted">No server required. Host creates an offer, guest pastes the offer and returns an answer.</div>
+                  <div class="stack">
+                    <div class="badge">1) Host</div>
+                    <button class="btn" id="btnCreateOffer">Create Offer</button>
+                    <textarea id="offerOut" rows="4" placeholder="Offer will appear here (copy & send to your friend)"></textarea>
+                    <div class="field"><input id="answerIn" placeholder="Paste friend's ANSWER here"/><button id="btnAcceptAnswer" class="btn secondary">Accept Answer</button></div>
+                  </div>
+                  <div class="stack">
+                    <div class="badge">2) Guest</div>
+                    <textarea id="offerIn" rows="4" placeholder="Paste Host's OFFER here"></textarea>
+                    <button id="btnCreateAnswer" class="btn">Create Answer</button>
+                    <textarea id="answerOut" rows="4" placeholder="Answer will appear here (copy back to Host)"></textarea>
+                  </div>
+                  <div id="rtcState" class="muted">Not connected</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="badge">Bidding</div>
+              <div class="stack">
+                <div class="field"><label style="width:120px">Player X bid</label><input id="bidX" type="password" inputmode="numeric" placeholder="0"/></div>
+                <div class="field"><label style="width:120px">Player O bid</label><input id="bidO" type="password" inputmode="numeric" placeholder="0"/></div>
+                <div class="field"><label style="width:120px">Winner plays</label><input id="winnerCell" type="number" min="0" max="8" placeholder="0‑8"/></div>
+                <div class="row">
+                  <button id="btnLockBids" class="btn">Lock & Reveal</button>
+                  <button id="btnCoinToss" class="btn secondary" title="Use only when bids tie">Coin Toss</button>
+                  <button id="btnUndo" class="btn ghost">Undo</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="badge">Match</div>
+              <div class="row">
+                <div class="col">
+                  <div>Player <b>X</b> budget: $<span id="moneyX" class="money">100</span></div>
+                  <div>Player <b>O</b> budget: $<span id="moneyO" class="money">100</span></div>
+                </div>
+                <div class="col stack">
+                  <div class="field"><label style="width:120px">Start Budget</label><input id="startBudget" type="number" value="100" min="1"/></div>
+                  <div class="field"><label style="width:120px">First Player</label>
+                    <select id="firstPlayer">
+                      <option value="X">X</option>
+                      <option value="O">O</option>
+                    </select>
+                  </div>
+                  <div class="row">
+                    <button id="btnNew" class="btn warn">New Match</button>
+                    <button id="btnExport" class="btn ghost">Export State</button>
+                    <button id="btnImport" class="btn ghost">Import State</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="badge">Event Log</div>
+              <div id="log" class="log" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col panel">
+        <div class="badge">Rules</div>
+        <ol>
+          <li>Both players start with the same budget.</li>
+          <li>Each turn, both secretly enter a bid. Click <b>Lock & Reveal</b> to resolve.</li>
+          <li>Higher bid wins the right to place a mark on <u>any empty cell</u>. Both players pay their own bid from budget.</li>
+          <li>If bids tie, click <b>Coin Toss</b> to randomly pick a winner.</li>
+          <li>First to make 3‑in‑a‑row wins. If board fills with no line, the match is a draw; remaining budgets are ignored.</li>
+        </ol>
+        <div class="hr"></div>
+        <details>
+          <summary><b>Online mode (no server, copy‑paste WebRTC)</b></summary>
+          <p>Choose <b>Online</b> mode. One player is <i>Host</i> (creates an Offer), the other is <i>Guest</i> (creates an Answer). Copy‑paste the texts between you. Once connected, 
+          all actions sync peer‑to‑peer in the browser. Works on GitHub Pages.</p>
+        </details>
+      </div>
+    </div>
+
+    <div class="footer muted">Tip: You can mask bids (password fields). After resolving, numbers are revealed in the log for transparency. Undo reverts only the last turn.</div>
+  </div>
+
+  <script>
+  ;(()=>{
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const moneyXEl = document.getElementById('moneyX');
+    const moneyOEl = document.getElementById('moneyO');
+    const bidXEl = document.getElementById('bidX');
+    const bidOEl = document.getElementById('bidO');
+    const winnerCellEl = document.getElementById('winnerCell');
+
+    const btnLock = document.getElementById('btnLockBids');
+    const btnCoin = document.getElementById('btnCoinToss');
+    const btnUndo = document.getElementById('btnUndo');
+    const btnNew = document.getElementById('btnNew');
+    const startBudgetEl = document.getElementById('startBudget');
+    const firstPlayerEl = document.getElementById('firstPlayer');
+
+    // Mode toggles
+    const modeHotseat = document.getElementById('modeHotseat');
+    const modeOnline = document.getElementById('modeOnline');
+    const webrtcBox = document.getElementById('webrtcBox');
+
+    const btnExport = document.getElementById('btnExport');
+    const btnImport = document.getElementById('btnImport');
+
+    // Simple state
+    let S = {
+      board: Array(9).fill(''), // '', 'X', 'O'
+      turn: 'X',
+      money:{X:100, O:100},
+      history:[], // stack of turns for undo
+      finished:false,
+    };
+
+    // Render board
+    function render(){
+      boardEl.innerHTML = '';
+      S.board.forEach((v, i)=>{
+        const d = document.createElement('button');
+        d.className = 'cell' + (v? ' disabled':'');
+        d.textContent = v || i; // show index if empty
+        d.disabled = !!v || S.finished;
+        d.setAttribute('aria-label', `Cell ${i}`);
+        d.addEventListener('click', ()=>{
+          winnerCellEl.value = i;
+        });
+        boardEl.appendChild(d);
+      });
+      moneyXEl.textContent = S.money.X.toFixed(2);
+      moneyOEl.textContent = S.money.O.toFixed(2);
+      statusEl.textContent = S.finished ? 'Match finished' : `Turn: ${S.turn}`;
+    }
+
+    function log(msg){
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `[${time}] ${msg}<br/>`;
+      logEl.scrollTop = logEl.scrollHeight;
+      sync();
+    }
+
+    function checkWin(){
+      const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for(const [a,b,c] of L){
+        if(S.board[a] && S.board[a]===S.board[b] && S.board[a]===S.board[c]) return S.board[a];
+      }
+      if(S.board.every(x=>x)) return 'D'; // draw
+      return '';
+    }
+
+    function coinToss(){
+      return Math.random()<0.5?'X':'O';
+    }
+
+    function resolveTurn(){
+      if(S.finished) return;
+      const bx = parseFloat(bidXEl.value||'0');
+      const bo = parseFloat(bidOEl.value||'0');
+      if(isNaN(bx)||isNaN(bo)||bx<0||bo<0){ alert('Bids must be non‑negative numbers.'); return; }
+      if(bx>S.money.X||bo>S.money.O){ alert('Bid exceeds current budget.'); return; }
+      let winner;
+      if(bx>bo) winner='X'; else if(bo>bx) winner='O'; else winner = coinToss();
+
+      const cell = parseInt(winnerCellEl.value,10);
+      if(!(cell>=0&&cell<=8) || S.board[cell]){ alert('Choose an empty cell index (0‑8).'); return; }
+
+      // Apply payment
+      S.money.X -= bx; S.money.O -= bo;
+      // Place mark
+      S.board[cell] = winner;
+      const rec = {bx,bo,winner,cell,prevTurn:S.turn, prevMoney:{...S.money}};
+      S.history.push(JSON.stringify(rec));
+
+      log(`Bids revealed — X:$${bx.toFixed(2)} O:$${bo.toFixed(2)}. Winner: <b>${winner}</b> → cell ${cell}. Budgets now X:$${S.money.X.toFixed(2)} O:$${S.money.O.toFixed(2)}`);
+
+      const w = checkWin();
+      if(w==='X'||w==='O'){
+        S.finished = true; log(`<b>${w}</b> wins with three in a row!`);
+      }else if(w==='D'){
+        S.finished = true; log('Board is full — Draw.');
+      }else{
+        S.turn = (S.turn==='X'?'O':'X');
+      }
+
+      // clear inputs for next round
+      bidXEl.value = '';
+      bidOEl.value = '';
+      winnerCellEl.value = '';
+      render();
+    }
+
+    function undo(){
+      if(!S.history.length) return;
+      const rec = JSON.parse(S.history.pop());
+      // revert mark
+      S.board[rec.cell] = '';
+      // revert money — we stored prevMoney AFTER payment, so reconstruct by adding bids back OR use prevTurn snapshot
+      // We stored prevMoney BEFORE? We stored after payment as spread — actually rec.prevMoney captured state AFTER payment? Let's ensure:
+      // rec.prevMoney was cloned BEFORE we mutated? Yes above we set prevMoney:{...S.money} *before* mutating? Wait we set after payment. Fix:
+      // We'll store prev snapshot BEFORE payment too: but since it's too late, simply add bids back here.
+      S.money.X += rec.bx; S.money.O += rec.bo;
+      S.finished = false;
+      S.turn = rec.prevTurn;
+      log('Last turn undone.');
+      render();
+    }
+
+    function newMatch(){
+      const b = Math.max(1, parseFloat(startBudgetEl.value||'100'));
+      S = {board:Array(9).fill(''), turn:firstPlayerEl.value, money:{X:b, O:b}, history:[], finished:false};
+      log('— New match started —');
+      render();
+      sync(true);
+    }
+
+    btnLock.addEventListener('click', resolveTurn);
+    btnCoin.addEventListener('click', ()=>{ const w=coinToss(); alert('Coin toss winner: '+w);});
+    btnUndo.addEventListener('click', undo);
+    btnNew.addEventListener('click', newMatch);
+
+    // Mode select UI
+    function setMode(hotseat){
+      if(hotseat){
+        modeHotseat.classList.add('active'); modeOnline.classList.remove('active'); webrtcBox.style.display='none';
+      }else{
+        modeOnline.classList.add('active'); modeHotseat.classList.remove('active'); webrtcBox.style.display='block';
+      }
+    }
+    modeHotseat.addEventListener('click', ()=>setMode(true));
+    modeOnline.addEventListener('click', ()=>setMode(false));
+
+    // Export/Import
+    btnExport.addEventListener('click', ()=>{
+      const payload = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+      navigator.clipboard.writeText(payload).then(()=>{
+        alert('State copied to clipboard. Share with your peer to sync.');
+      });
+    });
+    btnImport.addEventListener('click', async()=>{
+      const t = prompt('Paste exported state:');
+      if(!t) return;
+      try{
+        S = JSON.parse(decodeURIComponent(escape(atob(t))));
+        render(); log('State imported.'); sync(true);
+      }catch(e){ alert('Invalid state.'); }
+    });
+
+    // --- Minimal P2P via manual WebRTC (copy‑paste SDP) ---
+    const btnCreateOffer = document.getElementById('btnCreateOffer');
+    const offerOut = document.getElementById('offerOut');
+    const answerIn = document.getElementById('answerIn');
+    const btnAcceptAnswer = document.getElementById('btnAcceptAnswer');
+    const offerIn = document.getElementById('offerIn');
+    const btnCreateAnswer = document.getElementById('btnCreateAnswer');
+    const answerOut = document.getElementById('answerOut');
+    const rtcState = document.getElementById('rtcState');
+
+    let pc=null, dc=null; let isHost=false;
+
+    function setRTCState(s){ rtcState.textContent = s; }
+
+    function ensurePC(){
+      if(pc) return pc;
+      pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+      pc.oniceconnectionstatechange = ()=> setRTCState('ICE: '+pc.iceConnectionState);
+      pc.ondatachannel = (e)=>{
+        dc = e.channel; wireDC();
+      };
+      pc.onicecandidate = e=>{
+        if(!e.candidate){
+          if(isHost) offerOut.value = JSON.stringify(pc.localDescription);
+          else answerOut.value = JSON.stringify(pc.localDescription);
+        }
+      };
+      return pc;
+    }
+
+    function wireDC(){
+      dc.onopen = ()=>{ setRTCState('Connected'); sync(true); };
+      dc.onmessage = ev=>{
+        const msg = JSON.parse(ev.data);
+        if(msg.type==='SYNC'){ S = msg.state; render(); }
+        if(msg.type==='LOG'){ log(msg.text); }
+      };
+    }
+
+    function sync(force){
+      if(dc && dc.readyState==='open'){
+        dc.send(JSON.stringify({type:'SYNC', state:S}));
+      } else if(force){
+        // ignore silently if offline
+      }
+    }
+
+    // Host flow
+    btnCreateOffer.addEventListener('click', async()=>{
+      isHost = true; ensurePC();
+      dc = pc.createDataChannel('game'); wireDC();
+      const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+      setRTCState('Offer created. Share OFFER with guest.');
+    });
+
+    btnAcceptAnswer.addEventListener('click', async()=>{
+      try{
+        const ans = JSON.parse(answerIn.value);
+        await pc.setRemoteDescription(ans);
+        setRTCState('Answer set. Connecting...');
+      }catch(e){ alert('Invalid ANSWER'); }
+    });
+
+    // Guest flow
+    btnCreateAnswer.addEventListener('click', async()=>{
+      try{
+        ensurePC();
+        const off = JSON.parse(offerIn.value);
+        await pc.setRemoteDescription(off);
+        const ans = await pc.createAnswer();
+        await pc.setLocalDescription(ans);
+        setRTCState('Answer created. Send back to host.');
+      }catch(e){ alert('Invalid OFFER'); }
+    });
+
+    // Init
+    newMatch();
+    render();
+  })();
+  </script>
+</body>
+</html>
