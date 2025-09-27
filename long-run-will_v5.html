@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Long Run Will ...</title>
+<style>
+  :root{
+    --bg:#090a12; --panel:#0f1426; --panel2:#0b1020; --text:#eaf2ff; --muted:#9fb3d1; --bd:#1f2a4a;
+    --blue:#66e3ff; --pink:#ff5fd1; --yellow:#ffd166;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    color:var(--text);
+    background:
+      radial-gradient(1100px 650px at 15% -10%, rgba(102,227,255,.18), transparent 60%),
+      radial-gradient(1100px 650px at 85% 110%, rgba(255,95,209,.15), transparent 60%),
+      linear-gradient(180deg, #070910, #090a12);
+    display:flex; align-items:flex-start; justify-content:center; padding:24px 0;
+  }
+  .frame{max-width:1180px; width:94%; min-height:94vh; border:4px solid transparent; border-radius:24px; padding:22px; background-clip:padding-box; position:relative; box-shadow:0 0 40px rgba(102,227,255,.25), 0 0 40px rgba(255,95,209,.25)}
+  .frame::before{content:""; position:absolute; inset:0; border-radius:24px; padding:3px; background:linear-gradient(135deg,var(--blue),var(--pink)); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none}
+  .wrap{max-width:1040px; margin:0 auto; padding:0 16px}
+  h1{margin:.2rem 0 .4rem; font-size:30px; letter-spacing:.4px; text-align:center}
+  h1::after{content:""; display:block; width:180px; height:3px; margin:10px auto 0; border-radius:999px; background:linear-gradient(90deg,var(--blue), var(--pink))}
+  .sub{text-align:center; color:var(--muted); font-size:14px; margin-bottom:18px}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--bd); border-radius:18px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.35); margin-bottom:16px}
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:min(560px,100%); margin:14px auto}
+  .cell{aspect-ratio:1/1; border:1px solid #263255; border-radius:18px; background:#0b1326; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:60px; user-select:none; transition:transform .08s ease, box-shadow .12s ease}
+  .cell.empty{color:#5b6c8d}
+  .cell.x{color:var(--blue); text-shadow:0 0 16px rgba(102,227,255,.7), 0 2px 0 rgba(0,0,0,.35)}
+  .cell.o{color:var(--pink); text-shadow:0 0 16px rgba(255,95,209,.7), 0 2px 0 rgba(0,0,0,.35)}
+  .cell.placeable{cursor:pointer; box-shadow:0 0 0 2px rgba(102,227,255,.55), 0 0 24px rgba(102,227,255,.35), inset 0 0 30px rgba(102,227,255,.08)}
+  .cell.placeable:hover{transform:translateY(-2px)}
+  .badge{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid #2a3660; background:#0b1630; font-size:12px; color:#b9d6ff}
+  .muted{color:var(--muted)}
+  .btn{background:linear-gradient(180deg, #3ddcff, #1ab6f2); border:none; color:#08121f; font-weight:800; padding:10px 14px; border-radius:12px; cursor:pointer}
+  .btn.ghost{background:transparent; border:1px solid #2a3458; color:#cfe5ff}
+  .btn.warn{background:linear-gradient(180deg,#ffd166,#ffb627)}
+  .btn:disabled{opacity:.6; cursor:not-allowed}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace; background:#0c152b; border:1px solid #243257; border-radius:12px; padding:10px; height:150px; overflow:auto}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  input{background:#0c152b; border:1px solid #243257; color:#eaf2ff; border-radius:12px; padding:10px 12px}
+  input[type=number]{width:200px}
+  .meters{display:flex; gap:12px; margin-top:8px}
+  .meter{flex:1 1 0; background:#0c152b; border:1px solid #243257; border-radius:12px; height:18px; position:relative; overflow:hidden}
+  .meter > span{position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg, var(--blue), var(--pink))}
+  .meter .label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#eaf2ff; text-shadow:0 1px 2px #000}
+  .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(6px)}
+  .modal.show{display:flex}
+  .modal::before{content:""; position:absolute; inset:0; background:radial-gradient(800px 400px at 30% 20%, rgba(102,227,255,.18), transparent 60%), radial-gradient(800px 400px at 70% 80%, rgba(255,95,209,.15), transparent 60%), rgba(5,8,15,.7); pointer-events:none}
+  .card{position:relative; background:linear-gradient(180deg,#0f1833,#0b1227); border:1px solid #2a3a6e; border-radius:20px; padding:26px; width:min(520px,90vw); text-align:center; box-shadow:0 0 40px rgba(102,227,255,.35), 0 0 40px rgba(255,95,209,.25) inset}
+  .card::after{content:""; position:absolute; inset:0; border-radius:20px; padding:2px; background:linear-gradient(135deg,var(--blue),var(--pink)); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none}
+  .winTitle{font-size:28px; margin:0 0 8px; letter-spacing:.6px}
+  .winReason{color:#b9d6ff; margin-bottom:16px}
+</style>
+<script defer src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <div class="frame">
+    <div class="wrap">
+      <h1>Long Run Will ...</h1>
+      <div class="sub">Share link, bid simultaneously, winner clicks a cell. Neon X (blue) vs O (pink). Economic & Bankruptcy wins included.</div>
+
+      <div id="board" class="grid" aria-label="board"></div>
+      <div id="status" class="muted" style="margin-top:6px; text-align:center">Not connected</div>
+
+      <div class="meters">
+        <div class="meter" title="X budget"><span id="mx"></span><div class="label">X $<span id="moneyX">100</span></div></div>
+        <div class="meter" title="O budget"><span id="mo"></span><div class="label">O $<span id="moneyO">100</span></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="badge">Online (share link only)</div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnCreateLink" class="btn">Create Share Link</button>
+          <input id="shareLink" style="flex:1 1 340px" readonly placeholder="Create a link and send to your friend"/>
+          <span id="rtcState" class="muted">Offline</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="justify-content:center">
+          <button id="btnNew" class="btn warn">New Match</button>
+          <button id="btnExport" class="btn ghost">Export</button>
+          <button id="btnImport" class="btn ghost">Import</button>
+        </div>
+        <div id="roleInfo" class="muted" style="margin-top:6px; text-align:center">Role: —</div>
+      </div>
+
+      <div class="panel">
+        <div class="badge">Event Log</div>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bidModal" class="modal" aria-modal="true" role="dialog">
+    <div class="card">
+      <h2 id="bidTitle" class="winTitle">Enter your bid</h2>
+      <div id="bidHint" class="winReason">Both players must submit. You'll see “waiting” if your opponent hasn't submitted yet.</div>
+      <div class="row" style="justify-content:center; margin:10px 0">
+        <input id="bidInput" type="number" min="0" step="0.01" placeholder="0" />
+        <button id="btnSubmitBid" class="btn">Confirm bid</button>
+      </div>
+      <div id="bidWaiting" class="muted" style="display:none">Waiting for opponent…</div>
+    </div>
+  </div>
+
+  <div id="winModal" class="modal" aria-modal="true" role="dialog">
+    <div class="card">
+      <div id="winTitle" class="winTitle">Winner</div>
+      <div id="winReason" class="winReason">Reason</div>
+      <div class="row" style="justify-content:center">
+        <button id="btnPlayAgain" class="btn warn">Play Again</button>
+        <button id="btnCloseWin" class="btn ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+;(()=>{
+  const $ = s=>document.querySelector(s);
+  const boardEl=$('#board'), statusEl=$('#status'), logEl=$('#log');
+  const moneyXEl=$('#moneyX'), moneyOEl=$('#moneyO'), mxEl=$('#mx'), moEl=$('#mo');
+  const btnCreateLink=$('#btnCreateLink'), shareLinkEl=$('#shareLink'), rtcState=$('#rtcState'), roleInfo=$('#roleInfo');
+  const btnNew=$('#btnNew'), btnExport=$('#btnExport'), btnImport=$('#btnImport');
+  const bidModal=$('#bidModal'), bidTitle=$('#bidTitle'), bidInput=$('#bidInput'), btnSubmitBid=$('#btnSubmitBid'), bidWaiting=$('#bidWaiting');
+  const winModal=$('#winModal'), winTitle=$('#winTitle'), winReason=$('#winReason'), btnPlayAgain=$('#btnPlayAgain'), btnCloseWin=$('#btnCloseWin');
+
+  let S = { board:Array(9).fill(''), money:{X:100,O:100}, startBudget:100, matchNo:1, phase:'idle', pending:null, bids:{}, lastWin:null };
+  let local = { role:'?', isHost:false, connected:false, winShownFor:0, watchdog:null };
+
+  function log(m){ const t=new Date().toLocaleTimeString(); logEl.insertAdjacentHTML('beforeend',`[${t}] ${m}<br/>`); logEl.scrollTop=logEl.scrollHeight; }
+  const lines=()=>[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  function checkWin(){ for(const [a,b,c] of lines()) if(S.board[a]&&S.board[a]===S.board[b]&&S.board[a]===S.board[c]) return S.board[a]; if(S.board.every(x=>x)) return 'F'; return '' }
+  function updateMeters(){ moneyXEl.textContent=S.money.X.toFixed(2); moneyOEl.textContent=S.money.O.toFixed(2); mxEl.style.width=Math.max(0,Math.min(100,(S.money.X/S.startBudget)*100))+'%'; moEl.style.width=Math.max(0,Math.min(100,(S.money.O/S.startBudget)*100))+'%'; }
+  function computeRole(){ const hostX=(S.matchNo%2===1); return local.isHost ? (hostX?'X':'O') : (hostX?'O':'X'); }
+  function updateLocalRoleText(){ local.role = computeRole(); roleInfo.textContent=`Role: ${local.role} • Match #${S.matchNo}`; }
+
+  function render(){
+    boardEl.innerHTML='';
+    S.board.forEach((v,i)=>{
+      const canPlace = S.phase==='placing' && S.pending && !v && S.pending.winner===local.role;
+      const d=document.createElement('div'); d.className='cell'+(v?' '+(v==='X'?'x':'o'):' empty')+(canPlace?' placeable':''); d.textContent=v||i;
+      d.addEventListener('click',()=>{ if(canPlace){ if(local.isHost) hostPlace(i); else send({type:'PLACE', i}); } });
+      boardEl.appendChild(d);
+    });
+    const phaseText = S.phase==='bidding' ? 'Bidding…' : S.phase==='placing' ? (S.pending? `${S.pending.winner} to place…` : 'Placing…') : S.phase==='ended' ? 'Finished' : 'Not connected';
+    statusEl.textContent = local.connected ? `Match #${S.matchNo} — ${phaseText}` : 'Not connected';
+    updateMeters();
+    updateModalsPerState();
+  }
+
+  function showBid(){ bidTitle.textContent=`Enter your bid — You are ${local.role}`; bidInput.value=''; bidWaiting.style.display='none'; if(!bidModal.classList.contains('show')) bidModal.classList.add('show'); setTimeout(()=>bidInput.focus(),20); }
+  function hideBid(){ bidModal.classList.remove('show'); }
+  function showWin(winner, reason){ winTitle.textContent=winner==='No one'?'DRAW':`${winner} WINS!`; winTitle.style.color=winner==='X'?'var(--blue)':(winner==='O'?'var(--pink)':'#cfe5ff'); winReason.textContent=reason; if(!winModal.classList.contains('show')) winModal.classList.add('show'); }
+  function hideWin(){ winModal.classList.remove('show'); }
+
+  function updateModalsPerState(){
+    // If we are bidding and we haven't submitted our bid -> show modal
+    const youBid = typeof S.bids[local.role] === 'number';
+    if(S.phase==='bidding' && !youBid) showBid(); else hideBid();
+    if(S.phase==='ended' && S.lastWin && local.winShownFor!==S.matchNo){ showWin(S.lastWin.winner, S.lastWin.reason); local.winShownFor=S.matchNo; }
+    if(S.phase!=='ended'){ hideWin(); }
+  }
+
+  // Host-only transitions
+  function startMatchHost(resetMoney=false){
+    if(!local.isHost) return;
+    if(resetMoney) S.money={X:S.startBudget,O:S.startBudget};
+    S.board=Array(9).fill(''); S.bids={}; S.pending=null; S.lastWin=null; S.phase='bidding';
+    sendState(); updateLocalRoleText(); render();
+  }
+  function hostProcessBid(role, val){
+    if(S.phase!=='bidding') return;
+    S.bids[role]=val;
+    sendState(); // let other side mark "submitted"
+    if(typeof S.bids.X==='number' && typeof S.bids.O==='number'){
+      const bx=S.bids.X, bo=S.bids.O;
+      S.money.X-=bx; S.money.O-=bo;
+      const winner = bx>bo?'X':bo>bx?'O':(Math.random()<.5?'X':'O');
+      S.pending = {winner,bx,bo}; S.phase='placing';
+      sendState(); render();
+    }
+  }
+  function hostPlace(i){
+    if(S.phase!=='placing' || !S.pending || S.board[i]) return;
+    S.board[i]=S.pending.winner;
+    const w=checkWin();
+    if(w==='X'||w==='O'){ S.phase='ended'; S.lastWin={winner:w, reason:'Standard Win (3‑in‑a‑row)'}; }
+    else if(w==='F'){ const reason=(S.money.X>S.money.O)?'Economic Win (more money)':(S.money.O>S.money.X)?'Economic Win (more money)':'Draw'; const winner=(S.money.X>S.money.O)?'X':(S.money.O>S.money.X)?'O':'No one'; S.phase='ended'; S.lastWin={winner,reason}; }
+    else if(S.money.X<=0 || S.money.O<=0){ const winner=S.money.X<=0 && S.money.O<=0?'No one':(S.money.X<=0?'O':'X'); const reason=(winner==='No one')?'Draw — both bankrupt':'Bankruptcy'; S.phase='ended'; S.lastWin={winner,reason}; }
+    else { S.bids={}; S.pending=null; S.phase='bidding'; }
+    sendState(); render();
+  }
+
+  // Networking
+  let peer=null, conn=null;
+  function setRTC(s){ rtcState.textContent=s }
+  function makePeer(id){ return new Peer(id, { host:'0.peerjs.com', port:443, path:'/', secure:true }); }
+  function send(obj){ if(conn && conn.open){ try{ conn.send(obj); }catch(e){} } }
+  function sendState(){ updateLocalRoleText(); send({type:'STATE', S}); }
+
+  function bindConnection(c){
+    conn=c;
+    c.on('open', ()=>{
+      local.connected=true; setRTC('Connected');
+      if(local.isHost){ startMatchHost(true); }
+      else {
+        send({type:'PING'});
+        // watchdog: if we don't get bidding state in 2s, ping again (up to 5 times)
+        let count=0;
+        local.watchdog = setInterval(()=>{
+          if(S.phase==='bidding' || S.phase==='placing' || S.phase==='ended'){ clearInterval(local.watchdog); local.watchdog=null; return; }
+          if(++count<=5){ send({type:'PING'}); } else { clearInterval(local.watchdog); local.watchdog=null; }
+        }, 2000);
+      }
+    });
+    c.on('data', msg=>{
+      if(msg.type==='PING'){ if(local.isHost) sendState(); return; }
+      if(msg.type==='STATE'){ S = msg.S; updateLocalRoleText(); render(); return; }
+      if(local.isHost){
+        if(msg.type==='BID'){ hostProcessBid(msg.role, msg.value); }
+        if(msg.type==='PLACE'){ hostPlace(msg.i); }
+        if(msg.type==='NEW_MATCH'){ S.matchNo++; startMatchHost(true); }
+      }
+    });
+    c.on('close', ()=>{ local.connected=false; setRTC('Disconnected'); });
+    c.on('error', ()=>{ setRTC('Error'); });
+  }
+
+  // UI
+  btnSubmitBid.addEventListener('click', ()=>{
+    const v=parseFloat(bidInput.value||'0');
+    if(isNaN(v)||v<0) return alert('Bid must be non-negative');
+    if(local.role==='X' && v>S.money.X) return alert('Bid exceeds your budget');
+    if(local.role==='O' && v>S.money.O) return alert('Bid exceeds your budget');
+    hideBid();
+    if(local.isHost){ hostProcessBid(local.role, v); }
+    else { send({type:'BID', role: local.role, value: v}); bidWaiting.style.display='block'; }
+  });
+  btnPlayAgain.addEventListener('click', ()=>{ hideWin(); if(local.isHost){ S.matchNo++; startMatchHost(true); } else { send({type:'NEW_MATCH'}); } });
+  btnCloseWin.addEventListener('click', ()=> hideWin());
+  btnNew.addEventListener('click', ()=>{ if(local.isHost){ S.matchNo++; startMatchHost(true); } else { send({type:'NEW_MATCH'}); } });
+  btnExport.addEventListener('click', ()=>{ navigator.clipboard.writeText(btoa(JSON.stringify(S))); alert('State copied.'); });
+  btnImport.addEventListener('click', ()=>{ const t=prompt('Paste state:'); if(!t) return; try{ S=JSON.parse(atob(t)); updateLocalRoleText(); render(); }catch(e){alert('Invalid state')} });
+
+  function createShareLink(){
+    const key='room-'+Math.random().toString(36).slice(2,8);
+    const link=location.origin+location.pathname+'?key='+encodeURIComponent(key);
+    shareLinkEl.value=link; navigator.clipboard.writeText(link).catch(()=>{});
+    local.isHost=true;
+    peer = makePeer(key);
+    setRTC('Hosting…');
+    peer.on('open', ()=> setRTC('Waiting for guest…'));
+    peer.on('connection', c=> bindConnection(c));
+  }
+  function joinFromKey(k){
+    local.isHost=false;
+    peer = makePeer();
+    setRTC('Connecting…');
+    peer.on('open', ()=>{ const c=peer.connect(k); bindConnection(c); });
+  }
+
+  btnCreateLink.addEventListener('click', createShareLink);
+  window.addEventListener('load', ()=>{
+    const k=new URLSearchParams(location.search).get('key');
+    if(k){ joinFromKey(k); shareLinkEl.value = location.href; }
+    updateLocalRoleText();
+    render();
+  });
+})();
+</script>
+</body>
+</html>
