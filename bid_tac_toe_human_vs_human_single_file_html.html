@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bid Tac Toe — Human vs Human</title>
+  <style>
+    :root{ --bg:#0b0f14; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --accent:#22d3ee; --ok:#34d399; --warn:#fbbf24; --danger:#f87171; --bd:#1f2937 }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#0b0f14; color:var(--text)}
+    .wrap{max-width:1100px; margin:24px auto; padding:0 16px}
+    h1{margin:.2rem 0 .4rem; font-size:28px}
+    .sub{color:var(--muted); font-size:14px}
+    .row{display:flex; gap:16px; flex-wrap:wrap}
+    .col{flex:1 1 360px}
+    .panel{background:linear-gradient(180deg,#111827,#0f172a); border:1px solid var(--bd); border-radius:16px; padding:14px}
+    .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:min(420px,90vw); margin:8px 0}
+    .cell{aspect-ratio:1/1; border:1px solid var(--bd); border-radius:16px; background:#0b1220; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:44px; cursor:pointer; user-select:none}
+    .cell.empty{color:#64748b}
+    .cell.disabled{opacity:.6; cursor:not-allowed}
+    .badge{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--bd); background:#0b1220; font-size:12px}
+    .muted{color:var(--muted)}
+    .btn{background:#0ea5e9; border:none; color:#fff; font-weight:700; padding:10px 14px; border-radius:12px; cursor:pointer}
+    .btn.secondary{background:#374151}
+    .btn.warn{background:#f59e0b}
+    .btn.ghost{background:transparent; border:1px solid var(--bd)}
+    .field{display:flex; gap:8px; align-items:center}
+    input, textarea, select{background:#0b1220; border:1px solid #243043; color:#e5e7eb; border-radius:10px; padding:10px 12px; width:100%}
+    .stack{display:flex; flex-direction:column; gap:12px}
+    .log{font-family:ui-monospace,Menlo,Consolas,monospace; background:#0b1220; border:1px solid var(--bd); border-radius:12px; padding:10px; height:140px; overflow:auto}
+    details{background:#0b1220; border:1px solid #243043; border-radius:12px; padding:10px}
+  </style>
+  <!-- PeerJS（使用官方雲端信令，免自己架設伺服器；朋友輸入相同 Key 即可連線） -->
+  <script defer src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Bid Tac Toe — Human vs Human</h1>
+    <div class="sub">拍賣井字棋：雙方同額度（預設 $100）。每回合同時出價；高價者可在任意空格落子；<b>雙方</b>都扣各自出價；平手擲幣決定。</div>
+
+    <div class="row">
+      <div class="col panel">
+        <div class="badge">Board</div>
+        <div id="board" class="grid" aria-label="board"></div>
+        <div id="status" class="muted" style="margin-top:6px"></div>
+      </div>
+
+      <div class="col panel">
+        <div class="stack">
+          <div>
+            <div class="badge">Bidding</div>
+            <div class="stack">
+              <div class="field"><label style="width:120px">Player X bid</label><input id="bidX" type="number" min="0" step="0.01" placeholder="0"/></div>
+              <div class="field"><label style="width:120px">Player O bid</label><input id="bidO" type="number" min="0" step="0.01" placeholder="0"/></div>
+              <div class="field"><label style="width:120px">Winner plays</label><input id="winnerCell" type="number" min="0" max="8" placeholder="0‑8"/></div>
+              <div class="row"><button id="btnLockBids" class="btn">Lock & Reveal</button><button id="btnCoinToss" class="btn secondary">Coin Toss</button><button id="btnUndo" class="btn ghost">Undo</button></div>
+            </div>
+          </div>
+          <div>
+            <div class="badge">Match</div>
+            <div class="row">
+              <div class="col">
+                <div>Player <b>X</b> budget: $<span id="moneyX">100</span></div>
+                <div>Player <b>O</b> budget: $<span id="moneyO">100</span></div>
+              </div>
+              <div class="col stack">
+                <div class="field"><label style="width:120px">Start Budget</label><input id="startBudget" type="number" value="100" min="1"/></div>
+                <div class="field"><label style="width:120px">First Player</label><select id="firstPlayer"><option>X</option><option>O</option></select></div>
+                <div class="row"><button id="btnNew" class="btn warn">New Match</button><button id="btnExport" class="btn ghost">Export</button><button id="btnImport" class="btn ghost">Import</button></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="badge">Online（輸入相同 Key 即可連）</div>
+            <div class="stack">
+              <div class="field"><label style="width:140px">Room Key</label><input id="roomKey" placeholder="例如: SUNNY88"/></div>
+              <div class="row"><button id="btnHost" class="btn">Host</button><button id="btnJoin" class="btn secondary">Join</button></div>
+              <div class="muted">Host 與 Friend 輸入<strong>相同的 Room Key</strong> 即可連線。產生的分享連結也會附上 <code>?key=...</code>。</div>
+              <div id="rtcState" class="muted">Offline</div>
+            </div>
+          </div>
+          <div>
+            <div class="badge">Event Log</div>
+            <div id="log" class="log"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col panel">
+        <div class="badge">Rules</div>
+        <ol>
+          <li>同額度起始（可自訂）。</li>
+          <li>同時秘密出價 → 按「Lock & Reveal」結算。</li>
+          <li>高價者在任何空格落子；雙方都扣各自出價。</li>
+          <li>同價按「Coin Toss」。</li>
+          <li>先達三連線者勝；滿盤無線為和。</li>
+        </ol>
+        <details><summary><b>為何可用「Key 連線」？</b></summary><p>我們透過 <b>PeerJS</b> 的免費雲端信令伺服器（僅交換連線資訊，不傳遊戲內容）。你與朋友只要輸入相同 <code>Room Key</code>，就能連上彼此的瀏覽器（資料走 WebRTC P2P）。</p></details>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  ;(()=>{
+    const $ = s=>document.querySelector(s);
+    const boardEl = $('#board');
+    const statusEl = $('#status');
+    const logEl = $('#log');
+    const moneyXEl = $('#moneyX');
+    const moneyOEl = $('#moneyO');
+    const bidXEl = $('#bidX');
+    const bidOEl = $('#bidO');
+    const winnerCellEl = $('#winnerCell');
+
+    const btnLock=$('#btnLockBids');
+    const btnCoin=$('#btnCoinToss');
+    const btnUndo=$('#btnUndo');
+    const btnNew=$('#btnNew');
+    const startBudgetEl=$('#startBudget');
+    const firstPlayerEl=$('#firstPlayer');
+    const btnExport=$('#btnExport');
+    const btnImport=$('#btnImport');
+
+    const roomKeyEl=$('#roomKey');
+    const btnHost=$('#btnHost');
+    const btnJoin=$('#btnJoin');
+    const rtcState=$('#rtcState');
+
+    let S = { board:Array(9).fill(''), turn:'X', money:{X:100,O:100}, history:[], finished:false };
+
+    function render(){
+      boardEl.innerHTML='';
+      S.board.forEach((v,i)=>{
+        const d=document.createElement('button');
+        d.className='cell'+(v?'':' empty')+(S.finished?' disabled':'');
+        d.textContent=v||i; // 保證落子顯示 X/O
+        d.disabled=!!v||S.finished;
+        d.addEventListener('click',()=>{winnerCellEl.value=i});
+        boardEl.appendChild(d);
+      });
+      moneyXEl.textContent=S.money.X.toFixed(2);
+      moneyOEl.textContent=S.money.O.toFixed(2);
+      statusEl.textContent=S.finished?'Match finished':`Turn: ${S.turn}`;
+    }
+    function log(m){ const t=new Date().toLocaleTimeString(); logEl.insertAdjacentHTML('beforeend',`[${t}] ${m}<br/>`); logEl.scrollTop=logEl.scrollHeight; sync(); }
+    function lines(){return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]}
+    function checkWin(){ for(const [a,b,c] of lines()) if(S.board[a]&&S.board[a]===S.board[b]&&S.board[a]===S.board[c]) return S.board[a]; if(S.board.every(x=>x)) return 'D'; return '' }
+    const toss=()=>Math.random()<.5?'X':'O';
+
+    function resolveTurn(){
+      if(S.finished) return;
+      const bx=parseFloat(bidXEl.value||'0');
+      const bo=parseFloat(bidOEl.value||'0');
+      if([bx,bo].some(x=>isNaN(x)||x<0)) return alert('Bids must be non‑negative');
+      if(bx>S.money.X||bo>S.money.O) return alert('Bid exceeds budget');
+      const cell=parseInt(winnerCellEl.value,10);
+      if(!(cell>=0&&cell<=8) || S.board[cell]) return alert('Choose empty index 0‑8');
+      const winner = bx>bo? 'X' : bo>bx? 'O' : toss();
+      S.money.X-=bx; S.money.O-=bo; S.board[cell]=winner;
+      S.history.push({bx,bo,winner,cell,turn:S.turn});
+      log(`Reveal — X:$${bx.toFixed(2)} O:$${bo.toFixed(2)} ⇒ <b>${winner}</b> @ ${cell}`);
+      const w=checkWin();
+      if(w==='X'||w==='O'){S.finished=true; log(`<b>${w}</b> wins!`) } else if(w==='D'){S.finished=true; log('Draw.')} else {S.turn=S.turn==='X'?'O':'X'}
+      bidXEl.value=''; bidOEl.value=''; winnerCellEl.value='';
+      render();
+    }
+    function undo(){ const r=S.history.pop(); if(!r) return; S.board[r.cell]=''; S.money.X+=r.bx; S.money.O+=r.bo; S.turn=r.turn; S.finished=false; render(); log('Undo.'); }
+    function newMatch(){ const b=Math.max(1,parseFloat(startBudgetEl.value||'100')); S={board:Array(9).fill(''),turn:firstPlayerEl.value,money:{X:b,O:b},history:[],finished:false}; render(); log('— New match —'); sync(true) }
+
+    btnLock.addEventListener('click',resolveTurn);
+    btnCoin.addEventListener('click',()=>alert('Coin toss: '+toss()));
+    btnUndo.addEventListener('click',undo);
+    btnNew.addEventListener('click',newMatch);
+    btnExport.addEventListener('click',()=>{navigator.clipboard.writeText(btoa(JSON.stringify(S))); alert('State copied.');});
+    btnImport.addEventListener('click',()=>{const t=prompt('Paste state:'); if(!t) return; try{S=JSON.parse(atob(t)); render(); log('Imported.'); sync(true);}catch(e){alert('Invalid state')}});
+
+    // ========= PeerJS: 輸入相同 Key 連線 =========
+    let peer=null, conn=null; let isHost=false;
+    function setRTC(s){ rtcState.textContent=s }
+
+    function makePeer(id){
+      return new Peer(id, { host: '0.peerjs.com', port: 443, path: '/', secure: true, debug: 2 });
+    }
+
+    function onConn(c){
+      conn=c; setRTC('Connected');
+      conn.on('data', msg=>{ if(msg.type==='SYNC'){ S=msg.state; render(); } if(msg.type==='LOG'){ log(msg.text) } });
+      sync(true);
+    }
+
+    function sync(force){ if(conn && conn.open){ conn.send({type:'SYNC', state:S}); } }
+
+    btnHost.addEventListener('click',()=>{
+      const key=(roomKeyEl.value||'room-'+Math.random().toString(36).slice(2,8)).toLowerCase();
+      roomKeyEl.value=key; const share=location.origin+location.pathname+'?key='+encodeURIComponent(key);
+      peer = makePeer(key); isHost=true; setRTC('Hosting…');
+      peer.on('open',()=>{ setRTC('Waiting for guest. Share: '+share); navigator.clipboard.writeText(share).catch(()=>{}); });
+      peer.on('connection', onConn);
+    });
+
+    btnJoin.addEventListener('click',()=>{
+      const key=(roomKeyEl.value||new URLSearchParams(location.search).get('key')||'').toLowerCase();
+      if(!key) return alert('Enter Room Key');
+      peer = makePeer(undefined); isHost=false; setRTC('Connecting…');
+      peer.on('open',()=>{ const c=peer.connect(key); c.on('open',()=>onConn(c)); c.on('error',e=>alert('Connect error')); });
+    });
+
+    // 若網址帶 key，自動填入並幫來賓按 Join
+    window.addEventListener('load',()=>{ const k=new URLSearchParams(location.search).get('key'); if(k){ roomKeyEl.value=k; btnJoin.click(); } });
+
+    // init
+    render();
+  })();
+  </script>
+</body>
+</html>
